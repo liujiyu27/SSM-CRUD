@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+        <beans xmlns="http://www.springframework.org/schema/beans"
+               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+               xmlns:context="http://www.springframework.org/schema/context"
+               xmlns:mybatis="http://mybatis.org/schema/mybatis-spring" xmlns:tx="http://www.springframework.org/schema/tx"
+               xmlns:aop="http://www.springframework.org/schema/aop"
+               xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://mybatis.org/schema/mybatis-spring http://mybatis.org/schema/mybatis-spring.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd http://www.springframework.org/schema/aop https://www.springframework.org/schema/aop/spring-aop.xsd">
+        <!--spring的配置文件，这里主要配置和业务逻辑有关-->
+
+            <!--扫描基础包下的所有注解,将备案对象放到spring容器中-->
+            <context:component-scan base-package="com.atguigu">
+                <!--通过过滤排除掉controller中的包-->
+                <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+            </context:component-scan>
+            <!--引入外部属性文件-->
+            <context:property-placeholder location="classpath:jdbc.properties"></context:property-placeholder>
+
+            <!--阿里的数据源-->
+            <bean id="datasource" class="com.alibaba.druid.pool.DruidDataSource">
+                <property name="username" value="${jdbc.user}"></property>
+                <property name="password" value="${jdbc.password}"></property>
+                <property name="url" value="${jdbc.url}"></property>
+                <property name="driverClassName" value="${jdbc.driver}"></property>
+            </bean>
+
+            <!-- 开始整合Spring+Mybatis  -->
+            <!--spring容器管理mybatis中的api和相关配-->
+            <bean class="org.mybatis.spring.SqlSessionFactoryBean" id="sqlSessionFactoryBean">
+                <!--关联数据源   使用Spring中的数据库连接池 -->
+                <property name="dataSource" ref="datasource"></property>
+                <!--加载mybatis的核心配置文件-->
+                <property name="configLocation" value="classpath:mybatis-config.xml"></property>
+                <!--映射文件管理  配置加载Mapper.xml配置文件-->
+                <property name="mapperLocations" value="classpath:com/atguigu/crud/mapper/*.xml"></property>
+                <!--指定pojo所在的基础包,起别名  -->
+                <property name="typeAliasesPackage" value="com.atguigu.pojo"></property>
+            </bean>
+
+            <!--在spring容器中创建mapper代理对象   session.getMapper(接口.class)
+            把Mybatis中的Mapper接口都扫描到Spring容器中-->
+            <mybatis:scan base-package="com.atguigu.crud.mapper"></mybatis:scan>
+
+            <!--事务管理器-->
+            <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+                <property name="dataSource" ref="datasource"></property>
+            </bean>
+
+            <!-- 注解形式使用事务管理器-->
+            <!--<tx:annotation-driven transaction-manager="transactionManager"/>-->
+
+            <!-- XML形式使用事务管理器--><!--切面-->
+            <tx:advice id="txAdvice" transaction-manager="transactionManager">
+                <tx:attributes>
+                    <!--哪些方法需要事务-->
+                    <tx:method name="del*" propagation="REQUIRED" isolation="DEFAULT" read-only="false"/>
+                    <tx:method name="update*" propagation="REQUIRED" isolation="DEFAULT" read-only="false"/>
+                    <tx:method name="add*" propagation="REQUIRED" isolation="DEFAULT" read-only="false"/>
+                    <tx:method name="*" read-only="true"/>
+                </tx:attributes>
+            </tx:advice>
+
+            <!-- 动态的给目标方法添加事务    事务管理底层原理  :  AOP代理-->
+            <!-- advisor:相当于一个环绕通知，默认在方法前使用，前置通知的功能-->
+            <aop:config>
+                <aop:pointcut id="txcut" expression="execution(public * com.atguigu.crud.service.*.*(..))"/>
+                <aop:advisor advice-ref="txAdvice" pointcut-ref="txcut"></aop:advisor>
+            </aop:config>
+
+        </beans>
+
+
+
+
+
+
+
+</beans>
