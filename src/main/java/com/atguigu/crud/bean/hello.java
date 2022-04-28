@@ -13,6 +13,7 @@ public class hello {
         System.out.println("hello git2 ");
         System.out.println("hello git３ ");
         System.out.println("hello git４ ");
+        System.out.println("master test ");
 
 
     }
